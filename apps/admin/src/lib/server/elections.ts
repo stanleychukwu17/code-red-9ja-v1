@@ -200,8 +200,8 @@ export const createNationwideElection = createServerFn({ method: "POST" })
   .inputValidator(
     (data: {
       office_id: number;
-      election_date: string;
-      election_group_id?: number;
+      election_date?: string;
+      election_group_id: number;
     }) => data,
   )
   .handler(async ({ data }) => {
@@ -225,8 +225,8 @@ export const createStateElection = createServerFn({ method: "POST" })
   .inputValidator(
     (data: {
       office_id: number;
-      election_date: string;
-      election_group_id?: number;
+      election_date?: string;
+      election_group_id: number;
       state_ids: number[];
     }) => data,
   )
@@ -253,8 +253,8 @@ export const createSenatorialDistrictElection = createServerFn({
   .inputValidator(
     (data: {
       office_id: number;
-      election_date: string;
-      election_group_id?: number;
+      election_date?: string;
+      election_group_id: number;
       senatorial_district_ids: number[];
     }) => data,
   )
@@ -281,8 +281,8 @@ export const createFederalConstituencyElection = createServerFn({
   .inputValidator(
     (data: {
       office_id: number;
-      election_date: string;
-      election_group_id?: number;
+      election_date?: string;
+      election_group_id: number;
       federal_constituency_ids: number[];
     }) => data,
   )
@@ -309,8 +309,8 @@ export const createStateConstituencyElection = createServerFn({
   .inputValidator(
     (data: {
       office_id: number;
-      election_date: string;
-      election_group_id?: number;
+      election_date?: string;
+      election_group_id: number;
       state_constituency_ids: number[];
     }) => data,
   )
@@ -335,8 +335,8 @@ export const createLgaElection = createServerFn({ method: "POST" })
   .inputValidator(
     (data: {
       office_id: number;
-      election_date: string;
-      election_group_id?: number;
+      election_date?: string;
+      election_group_id: number;
       lga_ids: number[];
     }) => data,
   )
@@ -361,8 +361,8 @@ export const createWardElection = createServerFn({ method: "POST" })
   .inputValidator(
     (data: {
       office_id: number;
-      election_date: string;
-      election_group_id?: number;
+      election_date?: string;
+      election_group_id: number;
       all_wards?: boolean;
       ward_ids?: number[];
     }) => data,

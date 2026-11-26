@@ -1468,7 +1468,7 @@ func (s *SeedService) SeedElectionInstances(ctx context.Context, instances []See
 					return fmt.Errorf("failed checking existing nationwide election: %w", err)
 				}
 				if !exists {
-					if _, err := s.electionsService.CreateNationwideElection(gCtx, item.OfficeID, electionDate, electionGroupID); err != nil {
+					if _, err := s.electionsService.CreateNationwideElection(gCtx, item.OfficeID, electionGroupID); err != nil {
 						return fmt.Errorf("failed creating nationwide election for office %d: %w", item.OfficeID, err)
 					}
 					totalCreated.Add(1)
@@ -1498,7 +1498,7 @@ func (s *SeedService) SeedElectionInstances(ctx context.Context, instances []See
 					}
 				}
 				if len(missing) > 0 {
-					count, err := s.electionsService.CreateStateElection(gCtx, item.OfficeID, electionDate, electionGroupID, missing)
+					count, err := s.electionsService.CreateStateElection(gCtx, item.OfficeID, electionGroupID, missing)
 					if err != nil {
 						return fmt.Errorf("failed creating state elections for office %d: %w", item.OfficeID, err)
 					}
@@ -1529,7 +1529,7 @@ func (s *SeedService) SeedElectionInstances(ctx context.Context, instances []See
 					}
 				}
 				if len(missing) > 0 {
-					count, err := s.electionsService.CreateSenatorialDistrictElection(gCtx, item.OfficeID, electionDate, electionGroupID, missing)
+					count, err := s.electionsService.CreateSenatorialDistrictElection(gCtx, item.OfficeID, electionGroupID, missing)
 					if err != nil {
 						return fmt.Errorf("failed creating senatorial district elections for office %d: %w", item.OfficeID, err)
 					}
@@ -1560,7 +1560,7 @@ func (s *SeedService) SeedElectionInstances(ctx context.Context, instances []See
 					}
 				}
 				if len(missing) > 0 {
-					count, err := s.electionsService.CreateFederalConstituencyElection(gCtx, item.OfficeID, electionDate, electionGroupID, missing)
+					count, err := s.electionsService.CreateFederalConstituencyElection(gCtx, item.OfficeID, electionGroupID, missing)
 					if err != nil {
 						return fmt.Errorf("failed creating federal constituency elections for office %d: %w", item.OfficeID, err)
 					}
@@ -1591,7 +1591,7 @@ func (s *SeedService) SeedElectionInstances(ctx context.Context, instances []See
 					}
 				}
 				if len(missing) > 0 {
-					count, err := s.electionsService.CreateStateConstituencyElection(gCtx, item.OfficeID, electionDate, electionGroupID, missing)
+					count, err := s.electionsService.CreateStateConstituencyElection(gCtx, item.OfficeID, electionGroupID, missing)
 					if err != nil {
 						return fmt.Errorf("failed creating state constituency elections for office %d: %w", item.OfficeID, err)
 					}

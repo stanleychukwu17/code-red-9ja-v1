@@ -286,7 +286,7 @@ func (s *ElectionsService) batchCreateElections(ctx context.Context, tx pgx.Tx, 
 }
 
 // CreateNationwideElection sets up a country-wide election (e.g., Presidential).
-func (s *ElectionsService) CreateNationwideElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32) (queries.ElectionDetails, error) {
+func (s *ElectionsService) CreateNationwideElection(ctx context.Context, officeID int16, electionGroupID int32) (queries.ElectionDetails, error) {
 	// Fetch and validate the target office definition
 	office, err := s.officeService.GetOfficeByID(ctx, officeID)
 	if err != nil {
@@ -310,10 +310,12 @@ func (s *ElectionsService) CreateNationwideElection(ctx context.Context, officeI
 	// Bind queries to active transaction
 	txQueries := s.queries.WithTx(tx)
 
-	// Verify target election group exists and is active
-	if _, err := s.validateElectionGroup(ctx, txQueries, electionGroupID); err != nil {
+	// Verify target election group exists and is active, and use its date
+	eg, err := s.validateElectionGroup(ctx, txQueries, electionGroupID)
+	if err != nil {
 		return queries.ElectionDetails{}, err
 	}
+	electionDate := eg.ElectionDate.Time
 
 	// Create election record (nationwide scope has no geographic sub-boundary IDs)
 	name := fmt.Sprintf("%d %s Election", electionDate.Year(), officeElection)
@@ -338,7 +340,7 @@ func (s *ElectionsService) CreateNationwideElection(ctx context.Context, officeI
 }
 
 // CreateStateElection sets up multiple state-level elections (e.g., Governorship) under a shared election group.
-func (s *ElectionsService) CreateStateElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, stateIDs []int16) (int, error) {
+func (s *ElectionsService) CreateStateElection(ctx context.Context, officeID int16, electionGroupID int32, stateIDs []int16) (int, error) {
 	// Early return if no states provided
 	if len(stateIDs) == 0 {
 		return 0, nil
@@ -370,10 +372,12 @@ func (s *ElectionsService) CreateStateElection(ctx context.Context, officeID int
 	// Bind queries to active transaction
 	txQueries := s.queries.WithTx(tx)
 
-	// Verify target election group exists and is active
-	if _, err := s.validateElectionGroup(ctx, txQueries, electionGroupID); err != nil {
+	// Verify target election group exists and is active, and use its date
+	eg, err := s.validateElectionGroup(ctx, txQueries, electionGroupID)
+	if err != nil {
 		return 0, err
 	}
+	electionDate := eg.ElectionDate.Time
 
 	// Pre-fetch all states into map for O(1) in-memory lookups via bodiesService Redis cache
 	states, err := s.bodiesService.GetStatesByCountryID(ctx, constants.NigeriaCountryID)
@@ -423,7 +427,7 @@ func (s *ElectionsService) CreateStateElection(ctx context.Context, officeID int
 }
 
 // CreateSenatorialDistrictElection sets up elections across one or more Senatorial Districts.
-func (s *ElectionsService) CreateSenatorialDistrictElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, senatorialDistrictIDs []int32) (int, error) {
+func (s *ElectionsService) CreateSenatorialDistrictElection(ctx context.Context, officeID int16, electionGroupID int32, senatorialDistrictIDs []int32) (int, error) {
 	// Early return if no senatorial districts provided
 	if len(senatorialDistrictIDs) == 0 {
 		return 0, nil
@@ -455,10 +459,12 @@ func (s *ElectionsService) CreateSenatorialDistrictElection(ctx context.Context,
 	// Bind queries to active transaction
 	txQueries := s.queries.WithTx(tx)
 
-	// Verify target election group exists and is active
-	if _, err := s.validateElectionGroup(ctx, txQueries, electionGroupID); err != nil {
+	// Verify target election group exists and is active, and use its date
+	eg, err := s.validateElectionGroup(ctx, txQueries, electionGroupID)
+	if err != nil {
 		return 0, err
 	}
+	electionDate := eg.ElectionDate.Time
 
 	// Pre-fetch all senatorial districts into map for O(1) in-memory lookups
 	districts, err := txQueries.GetSenatorialDistricts(ctx, 0)
@@ -511,7 +517,7 @@ func (s *ElectionsService) CreateSenatorialDistrictElection(ctx context.Context,
 }
 
 // CreateFederalConstituencyElection sets up elections across one or more Federal Constituencies (House of Representatives).
-func (s *ElectionsService) CreateFederalConstituencyElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, federalConstituencyIDs []int32) (int, error) {
+func (s *ElectionsService) CreateFederalConstituencyElection(ctx context.Context, officeID int16, electionGroupID int32, federalConstituencyIDs []int32) (int, error) {
 	// Early return if no federal constituencies provided
 	if len(federalConstituencyIDs) == 0 {
 		return 0, nil
@@ -543,10 +549,12 @@ func (s *ElectionsService) CreateFederalConstituencyElection(ctx context.Context
 	// Bind queries to active transaction
 	txQueries := s.queries.WithTx(tx)
 
-	// Verify target election group exists and is active
-	if _, err := s.validateElectionGroup(ctx, txQueries, electionGroupID); err != nil {
+	// Verify target election group exists and is active, and use its date
+	eg, err := s.validateElectionGroup(ctx, txQueries, electionGroupID)
+	if err != nil {
 		return 0, err
 	}
+	electionDate := eg.ElectionDate.Time
 
 	// Pre-fetch all federal constituencies into map for O(1) in-memory lookups
 	constituencies, err := txQueries.GetFederalConstituencies(ctx, queries.GetFederalConstituenciesParams{
@@ -607,7 +615,7 @@ func (s *ElectionsService) CreateFederalConstituencyElection(ctx context.Context
 }
 
 // CreateStateConstituencyElection sets up elections across one or more State Assembly Constituencies.
-func (s *ElectionsService) CreateStateConstituencyElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, stateConstituencyIDs []int32) (int, error) {
+func (s *ElectionsService) CreateStateConstituencyElection(ctx context.Context, officeID int16, electionGroupID int32, stateConstituencyIDs []int32) (int, error) {
 	// Early return if no state constituencies provided
 	if len(stateConstituencyIDs) == 0 {
 		return 0, nil
@@ -639,10 +647,12 @@ func (s *ElectionsService) CreateStateConstituencyElection(ctx context.Context, 
 	// Bind queries to active transaction
 	txQueries := s.queries.WithTx(tx)
 
-	// Verify target election group exists and is active
-	if _, err := s.validateElectionGroup(ctx, txQueries, electionGroupID); err != nil {
+	// Verify target election group exists and is active, and use its date
+	eg, err := s.validateElectionGroup(ctx, txQueries, electionGroupID)
+	if err != nil {
 		return 0, err
 	}
+	electionDate := eg.ElectionDate.Time
 
 	// Pre-fetch all state constituencies into map for O(1) in-memory lookups
 	constituencies, err := txQueries.GetStateConstituencies(ctx, queries.GetStateConstituenciesParams{
@@ -711,7 +721,7 @@ func (s *ElectionsService) CreateStateConstituencyElection(ctx context.Context, 
 }
 
 // CreateLgaElection sets up elections across one or more Local Government Areas (LGAs) (e.g., LGA Chairmanship).
-func (s *ElectionsService) CreateLgaElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, lgaIDs []int32) (int, error) {
+func (s *ElectionsService) CreateLgaElection(ctx context.Context, officeID int16, electionGroupID int32, lgaIDs []int32) (int, error) {
 	// Early return if no LGAs provided
 	if len(lgaIDs) == 0 {
 		return 0, nil
@@ -743,10 +753,12 @@ func (s *ElectionsService) CreateLgaElection(ctx context.Context, officeID int16
 	// Bind queries to active transaction
 	txQueries := s.queries.WithTx(tx)
 
-	// Verify target election group exists and is active
-	if _, err := s.validateElectionGroup(ctx, txQueries, electionGroupID); err != nil {
+	// Verify target election group exists and is active, and use its date
+	eg, err := s.validateElectionGroup(ctx, txQueries, electionGroupID)
+	if err != nil {
 		return 0, err
 	}
+	electionDate := eg.ElectionDate.Time
 
 	// Pre-fetch all LGAs into map for O(1) in-memory lookups
 	lgas, err := txQueries.GetLGAs(ctx, 0)
@@ -810,7 +822,6 @@ func (s *ElectionsService) CreateLgaElection(ctx context.Context, officeID int16
 
 type CreateWardElectionParams struct {
 	OfficeID        int16
-	ElectionDate    time.Time
 	ElectionGroupID int32
 	AllWards        bool
 	WardIDs         []int32
@@ -852,10 +863,12 @@ func (s *ElectionsService) CreateWardElection(ctx context.Context, params Create
 	// Bind queries to active transaction
 	txQueries := s.queries.WithTx(tx)
 
-	// Verify target election group exists and is active
-	if _, err := s.validateElectionGroup(ctx, txQueries, params.ElectionGroupID); err != nil {
+	// Verify target election group exists and is active, and use its date
+	eg, err := s.validateElectionGroup(ctx, txQueries, params.ElectionGroupID)
+	if err != nil {
 		return 0, err
 	}
+	electionDate := eg.ElectionDate.Time
 
 	// Resolve target wards: fetch all nationwide wards if requested, or only the selected wards
 	var targetWards []queries.Ward
@@ -881,10 +894,10 @@ func (s *ElectionsService) CreateWardElection(ctx context.Context, params Create
 	// Build election parameters for each Ward directly using its stored ancestral IDs (State, LGA, Senatorial, Constituency)
 	paramsList := make([]queries.CreateElectionInstanceParams, 0, len(targetWards))
 	for _, wardRow := range targetWards {
-		name := fmt.Sprintf("%d %s Election (%s)", params.ElectionDate.Year(), officeElection, wardRow.Name)
+		name := fmt.Sprintf("%d %s Election (%s)", electionDate.Year(), officeElection, wardRow.Name)
 		paramsList = append(paramsList, queries.CreateElectionInstanceParams{
 			Name:                  name,
-			ElectionDate:          pgtype.Date{Time: params.ElectionDate, Valid: true},
+			ElectionDate:          pgtype.Date{Time: electionDate, Valid: true},
 			ElectionGroupID:       params.ElectionGroupID,
 			OfficeID:              params.OfficeID,
 			Scope:                 "ward",

@@ -22,26 +22,25 @@ export const Route = createFileRoute("/_authenticated/inec-result-grabber/")({
 });
 
 function RouteComponent() {
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
-    useInfiniteQuery({
-      queryKey: ["inec-result-grabbers"],
-      queryFn: async ({ pageParam }) => {
-        const res = await getINECResultGrabbers({
-          data: { limit: 20, cursor: pageParam as string },
-        });
-        if (res && res.success && res.data) {
-          return res;
-        }
-        throw new Error(res?.message || "Failed to fetch INEC result grabbers");
-      },
-      initialPageParam: "",
-      getNextPageParam: (lastPage) => {
-        if (lastPage && lastPage.meta && lastPage.meta.has_more) {
-          return lastPage.meta.next_cursor || undefined;
-        }
-        return undefined;
-      },
-    });
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useInfiniteQuery({
+    queryKey: ["inec-result-grabbers"],
+    queryFn: async ({ pageParam }) => {
+      const res = await getINECResultGrabbers({
+        data: { limit: 20, cursor: pageParam as string },
+      });
+      if (res && res.success && res.data) {
+        return res;
+      }
+      throw new Error(res?.message || "Failed to fetch INEC result grabbers");
+    },
+    initialPageParam: "",
+    getNextPageParam: (lastPage) => {
+      if (lastPage && lastPage.meta && lastPage.meta.has_more) {
+        return lastPage.meta.next_cursor || undefined;
+      }
+      return undefined;
+    },
+  });
 
   const { ref: sentinelRef, isIntersecting } = useIntersectionObserver({
     threshold: 0.1,

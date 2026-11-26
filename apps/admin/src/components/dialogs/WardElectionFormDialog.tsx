@@ -21,7 +21,6 @@ import { useLGAs } from "#/hooks/useLGAs";
 import { getStates } from "#/lib/server/states";
 import { useNigeriaStates } from "#/hooks/useNigeriaStates";
 import { getWards } from "#/lib/server/wards";
-import { SelectDate } from "@repo/ui/components/selects/date-select";
 import { SelectOffice } from "@repo/ui/components/selects/office-select";
 import { SelectState } from "@repo/ui/components/selects/state-select";
 import { SelectLga } from "@repo/ui/components/selects/lga-select";
@@ -74,7 +73,6 @@ export function WardElectionFormDialog({ open, onClose, onSuccess }: WardElectio
   const form = useForm({
     defaultValues: {
       electionGroupId: undefined as number | undefined,
-      electionDate: "",
       officeId: undefined as number | undefined,
     },
     onSubmit: async ({ value }) => {
@@ -92,7 +90,6 @@ export function WardElectionFormDialog({ open, onClose, onSuccess }: WardElectio
   useEffect(() => {
     if (open) {
       form.setFieldValue("electionGroupId", undefined);
-      form.setFieldValue("electionDate", "");
       form.setFieldValue("officeId", undefined);
       setWardsMode("custom");
       setSelectedWards([]);
@@ -114,7 +111,6 @@ export function WardElectionFormDialog({ open, onClose, onSuccess }: WardElectio
   const saveMutation = useMutation({
     mutationFn: async (values: {
       electionGroupId: number | undefined;
-      electionDate: string;
       officeId: number | undefined;
     }) => {
       // Validate election group selection
@@ -125,10 +121,6 @@ export function WardElectionFormDialog({ open, onClose, onSuccess }: WardElectio
       if (!values.officeId) {
         throw new Error("Office is required");
       }
-      // Validate election date
-      if (!values.electionDate) {
-        throw new Error("Election date is required");
-      }
       // Validate ward selection when custom mode is active
       if (wardsMode === "custom" && selectedWards.length === 0) {
         throw new Error("At least one Ward must be selected (or select 'All Wards')");
@@ -138,7 +130,6 @@ export function WardElectionFormDialog({ open, onClose, onSuccess }: WardElectio
       const res = await createWardElection({
         data: {
           office_id: values.officeId,
-          election_date: values.electionDate,
           election_group_id: values.electionGroupId,
           all_wards: wardsMode === "all",
           ward_ids: wardsMode === "all" ? [] : selectedWards.map((w) => w.id),
@@ -243,27 +234,6 @@ export function WardElectionFormDialog({ open, onClose, onSuccess }: WardElectio
                         update={(item) => field.handleChange(item.id)}
                         fetchOffices={getContestedOffices}
                         filterScope="ward"
-                        errorMsg={field.state.meta.errors?.join(", ")}
-                      />
-                    )}
-                  />
-                </div>
-
-                {/* Election Date */}
-                <div className="flex flex-col gap-1.5 w-full">
-                  <Label title="Election date" />
-                  <form.Field
-                    name="electionDate"
-                    validators={{
-                      onChange: ({ value }) =>
-                        !value ? "Election date is required" : undefined,
-                    }}
-                    children={(field) => (
-                      <SelectDate
-                        selectedId={field.state.value}
-                        update={(value) => {
-                          field.handleChange(value);
-                        }}
                         errorMsg={field.state.meta.errors?.join(", ")}
                       />
                     )}

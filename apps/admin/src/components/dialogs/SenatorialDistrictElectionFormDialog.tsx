@@ -19,7 +19,6 @@ import { getElectionGroups } from "#/lib/server/election_groups";
 import { useNigeriaStates } from "#/hooks/useNigeriaStates";
 import { useSenatorialDistricts } from "#/hooks/useSenatorialDistricts";
 import { createSenatorialDistrictElection } from "#/lib/server/elections";
-import { SelectDate } from "@repo/ui/components/selects/date-select";
 import { SelectOffice } from "@repo/ui/components/selects/office-select";
 
 import { cn } from "@repo/ui/lib/utils";
@@ -89,7 +88,6 @@ export function SenatorialDistrictElectionFormDialog({
   const form = useForm({
     defaultValues: {
       electionGroupId: undefined as number | undefined,
-      electionDate: "",
       officeId: undefined as number | undefined,
     },
     onSubmit: async ({ value }) => {
@@ -120,7 +118,6 @@ export function SenatorialDistrictElectionFormDialog({
   React.useEffect(() => {
     if (open) {
       form.setFieldValue("electionGroupId", undefined);
-      form.setFieldValue("electionDate", "");
       form.setFieldValue("officeId", undefined);
       setDistrictsMode("custom");
       setSelectedDistricts([]);
@@ -143,7 +140,6 @@ export function SenatorialDistrictElectionFormDialog({
   const saveMutation = useMutation({
     mutationFn: async (values: {
       electionGroupId: number | undefined;
-      electionDate: string;
       officeId: number | undefined;
     }) => {
       if (!values.electionGroupId) {
@@ -152,9 +148,6 @@ export function SenatorialDistrictElectionFormDialog({
       if (!values.officeId) {
         throw new Error("Office is required");
       }
-      if (!values.electionDate) {
-        throw new Error("Election date is required");
-      }
       if (selectedDistricts.length === 0) {
         throw new Error("At least one district must be selected");
       }
@@ -162,7 +155,6 @@ export function SenatorialDistrictElectionFormDialog({
       const res = await createSenatorialDistrictElection({
         data: {
           office_id: values.officeId,
-          election_date: values.electionDate,
           election_group_id: values.electionGroupId,
           senatorial_district_ids: selectedDistricts.map((d) => d.id),
         },
@@ -249,27 +241,6 @@ export function SenatorialDistrictElectionFormDialog({
                         update={(item) => field.handleChange(item.id)}
                         fetchOffices={getContestedOffices}
                         filterScope="senatorial-district"
-                        errorMsg={field.state.meta.errors?.join(", ")}
-                      />
-                    )}
-                  />
-                </div>
-
-                {/* Election Date */}
-                <div className="flex flex-col gap-1.5 w-full">
-                  <Label title="Election date" />
-                  <form.Field
-                    name="electionDate"
-                    validators={{
-                      onChange: ({ value }) =>
-                        !value ? "Election date is required" : undefined,
-                    }}
-                    children={(field) => (
-                      <SelectDate
-                        selectedId={field.state.value}
-                        update={(value) => {
-                          field.handleChange(value);
-                        }}
                         errorMsg={field.state.meta.errors?.join(", ")}
                       />
                     )}

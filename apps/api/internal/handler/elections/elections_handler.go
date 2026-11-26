@@ -13,19 +13,18 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
 )
 
 type ElectionsService interface {
-	CreateNationwideElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32) (queries.ElectionDetails, error)
-	CreateStateElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, stateIDs []int16) (int, error)
-	CreateSenatorialDistrictElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, senatorialDistrictIDs []int32) (int, error)
-	CreateFederalConstituencyElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, federalConstituencyIDs []int32) (int, error)
-	CreateStateConstituencyElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, stateConstituencyIDs []int32) (int, error)
-	CreateLgaElection(ctx context.Context, officeID int16, electionDate time.Time, electionGroupID int32, lgaIDs []int32) (int, error)
+	CreateNationwideElection(ctx context.Context, officeID int16, electionGroupID int32) (queries.ElectionDetails, error)
+	CreateStateElection(ctx context.Context, officeID int16, electionGroupID int32, stateIDs []int16) (int, error)
+	CreateSenatorialDistrictElection(ctx context.Context, officeID int16, electionGroupID int32, senatorialDistrictIDs []int32) (int, error)
+	CreateFederalConstituencyElection(ctx context.Context, officeID int16, electionGroupID int32, federalConstituencyIDs []int32) (int, error)
+	CreateStateConstituencyElection(ctx context.Context, officeID int16, electionGroupID int32, stateConstituencyIDs []int32) (int, error)
+	CreateLgaElection(ctx context.Context, officeID int16, electionGroupID int32, lgaIDs []int32) (int, error)
 	CreateWardElection(ctx context.Context, params elections.CreateWardElectionParams) (int, error)
 	GetElectionByID(ctx context.Context, id int32) (queries.ElectionDetails, error)
 	GetElectionByFakeID(ctx context.Context, fakeID int64) (queries.ElectionDetails, error)
@@ -179,60 +178,46 @@ type BulkDeleteElectionsRequest struct {
 	ElectionGroupID *int32  `json:"election_group_id,omitempty"`
 }
 
-func optionalJSONDate(d *utils.JSONDate) time.Time {
-	if d == nil {
-		return time.Time{}
-	}
-	return d.Time()
-}
-
 type CreateNationwideElectionRequest struct {
-	OfficeID        int16           `json:"office_id" validate:"required,gt=0"`
-	ElectionDate    *utils.JSONDate `json:"election_date"`
-	ElectionGroupID int32           `json:"election_group_id" validate:"required,gt=0"`
+	OfficeID        int16 `json:"office_id" validate:"required,gt=0"`
+	ElectionGroupID int32 `json:"election_group_id" validate:"required,gt=0"`
 }
 
 type CreateStateElectionRequest struct {
-	OfficeID        int16           `json:"office_id" validate:"required,gt=0"`
-	ElectionDate    *utils.JSONDate `json:"election_date"`
-	ElectionGroupID int32           `json:"election_group_id" validate:"required,gt=0"`
-	StateIDs        []int16         `json:"state_ids" validate:"required,min=1"`
+	OfficeID        int16   `json:"office_id" validate:"required,gt=0"`
+	ElectionGroupID int32   `json:"election_group_id" validate:"required,gt=0"`
+	StateIDs        []int16 `json:"state_ids" validate:"required,min=1"`
 }
 
 type CreateSenatorialDistrictElectionRequest struct {
-	OfficeID              int16           `json:"office_id" validate:"required,gt=0"`
-	ElectionDate          *utils.JSONDate `json:"election_date"`
-	ElectionGroupID       int32           `json:"election_group_id" validate:"required,gt=0"`
-	SenatorialDistrictIDs []int32         `json:"senatorial_district_ids" validate:"required,min=1"`
+	OfficeID              int16   `json:"office_id" validate:"required,gt=0"`
+	ElectionGroupID       int32   `json:"election_group_id" validate:"required,gt=0"`
+	SenatorialDistrictIDs []int32 `json:"senatorial_district_ids" validate:"required,min=1"`
 }
 
 type CreateFederalConstituencyElectionRequest struct {
-	OfficeID               int16           `json:"office_id" validate:"required,gt=0"`
-	ElectionDate           *utils.JSONDate `json:"election_date"`
-	ElectionGroupID        int32           `json:"election_group_id" validate:"required,gt=0"`
-	FederalConstituencyIDs []int32         `json:"federal_constituency_ids" validate:"required,min=1"`
+	OfficeID               int16   `json:"office_id" validate:"required,gt=0"`
+	ElectionGroupID        int32   `json:"election_group_id" validate:"required,gt=0"`
+	FederalConstituencyIDs []int32 `json:"federal_constituency_ids" validate:"required,min=1"`
 }
 
 type CreateStateConstituencyElectionRequest struct {
-	OfficeID             int16           `json:"office_id" validate:"required,gt=0"`
-	ElectionDate         *utils.JSONDate `json:"election_date"`
-	ElectionGroupID      int32           `json:"election_group_id" validate:"required,gt=0"`
-	StateConstituencyIDs []int32         `json:"state_constituency_ids" validate:"required,min=1"`
+	OfficeID             int16   `json:"office_id" validate:"required,gt=0"`
+	ElectionGroupID      int32   `json:"election_group_id" validate:"required,gt=0"`
+	StateConstituencyIDs []int32 `json:"state_constituency_ids" validate:"required,min=1"`
 }
 
 type CreateLgaElectionRequest struct {
-	OfficeID        int16           `json:"office_id" validate:"required,gt=0"`
-	ElectionDate    *utils.JSONDate `json:"election_date"`
-	ElectionGroupID int32           `json:"election_group_id" validate:"required,gt=0"`
-	LgaIDs          []int32         `json:"lga_ids" validate:"required,min=1"`
+	OfficeID        int16   `json:"office_id" validate:"required,gt=0"`
+	ElectionGroupID int32   `json:"election_group_id" validate:"required,gt=0"`
+	LgaIDs          []int32 `json:"lga_ids" validate:"required,min=1"`
 }
 
 type CreateWardElectionRequest struct {
-	OfficeID        int16           `json:"office_id" validate:"required,gt=0"`
-	ElectionDate    *utils.JSONDate `json:"election_date"`
-	ElectionGroupID int32           `json:"election_group_id" validate:"required,gt=0"`
-	AllWards        bool            `json:"all_wards"`
-	WardIDs         []int32         `json:"ward_ids"`
+	OfficeID        int16   `json:"office_id" validate:"required,gt=0"`
+	ElectionGroupID int32   `json:"election_group_id" validate:"required,gt=0"`
+	AllWards        bool    `json:"all_wards"`
+	WardIDs         []int32 `json:"ward_ids"`
 }
 
 // CreateNationwideElection godoc
@@ -261,7 +246,7 @@ func (h *Handler) CreateNationwideElection(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Create election instance, resolve election group, and seed skeleton results
-	election, err := h.service.CreateNationwideElection(r.Context(), req.OfficeID, optionalJSONDate(req.ElectionDate), req.ElectionGroupID)
+	election, err := h.service.CreateNationwideElection(r.Context(), req.OfficeID, req.ElectionGroupID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create nationwide election: "+err.Error())
 		return
@@ -301,7 +286,7 @@ func (h *Handler) CreateStateElection(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Batch create election instances for each state, resolve election group, and seed skeleton results
-	count, err := h.service.CreateStateElection(r.Context(), req.OfficeID, optionalJSONDate(req.ElectionDate), req.ElectionGroupID, req.StateIDs)
+	count, err := h.service.CreateStateElection(r.Context(), req.OfficeID, req.ElectionGroupID, req.StateIDs)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create state elections: "+err.Error())
 		return
@@ -343,7 +328,7 @@ func (h *Handler) CreateSenatorialDistrictElection(w http.ResponseWriter, r *htt
 	}
 
 	// Batch create elections across selected senatorial districts, resolve group, and seed skeleton results
-	count, err := h.service.CreateSenatorialDistrictElection(r.Context(), req.OfficeID, optionalJSONDate(req.ElectionDate), req.ElectionGroupID, req.SenatorialDistrictIDs)
+	count, err := h.service.CreateSenatorialDistrictElection(r.Context(), req.OfficeID, req.ElectionGroupID, req.SenatorialDistrictIDs)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create senatorial district elections: "+err.Error())
 		return
@@ -385,7 +370,7 @@ func (h *Handler) CreateFederalConstituencyElection(w http.ResponseWriter, r *ht
 	}
 
 	// Batch create elections across selected federal constituencies, resolve group, and seed skeleton results
-	count, err := h.service.CreateFederalConstituencyElection(r.Context(), req.OfficeID, optionalJSONDate(req.ElectionDate), req.ElectionGroupID, req.FederalConstituencyIDs)
+	count, err := h.service.CreateFederalConstituencyElection(r.Context(), req.OfficeID, req.ElectionGroupID, req.FederalConstituencyIDs)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create federal constituency elections: "+err.Error())
 		return
@@ -427,7 +412,7 @@ func (h *Handler) CreateStateConstituencyElection(w http.ResponseWriter, r *http
 	}
 
 	// Batch create elections across selected state assembly constituencies, resolve group, and seed skeleton results
-	count, err := h.service.CreateStateConstituencyElection(r.Context(), req.OfficeID, optionalJSONDate(req.ElectionDate), req.ElectionGroupID, req.StateConstituencyIDs)
+	count, err := h.service.CreateStateConstituencyElection(r.Context(), req.OfficeID, req.ElectionGroupID, req.StateConstituencyIDs)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create state constituency elections: "+err.Error())
 		return
@@ -469,7 +454,7 @@ func (h *Handler) CreateLgaElection(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Batch create elections across selected LGAs, resolve group, and seed skeleton results
-	count, err := h.service.CreateLgaElection(r.Context(), req.OfficeID, optionalJSONDate(req.ElectionDate), req.ElectionGroupID, req.LgaIDs)
+	count, err := h.service.CreateLgaElection(r.Context(), req.OfficeID, req.ElectionGroupID, req.LgaIDs)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create LGA elections: "+err.Error())
 		return
@@ -519,7 +504,6 @@ func (h *Handler) CreateWardElection(w http.ResponseWriter, r *http.Request) {
 	// Batch create elections across selected Wards, resolve group, and seed skeleton results
 	count, err := h.service.CreateWardElection(r.Context(), elections.CreateWardElectionParams{
 		OfficeID:        req.OfficeID,
-		ElectionDate:    optionalJSONDate(req.ElectionDate),
 		ElectionGroupID: req.ElectionGroupID,
 		AllWards:        req.AllWards,
 		WardIDs:         req.WardIDs,
@@ -719,7 +703,7 @@ func (h *Handler) UpdateElection(w http.ResponseWriter, r *http.Request) {
 	updated, err := h.service.UpdateElection(r.Context(), elections.UpdateElectionParams{
 		ID:              int32(id),
 		Name:            req.Name,
-		ElectionDate:    optionalJSONDate(req.ElectionDate),
+		ElectionDate:    req.ElectionDate.Time(),
 		ElectionGroupID: req.ElectionGroupID,
 	})
 	if err != nil {

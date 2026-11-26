@@ -17,7 +17,6 @@ import { QUERY_KEYS } from "#/lib/config";
 import { getElectionGroups } from "#/lib/server/election_groups";
 import { useNigeriaStates } from "#/hooks/useNigeriaStates";
 import { useLGAs } from "#/hooks/useLGAs";
-import { SelectDate } from "@repo/ui/components/selects/date-select";
 import { SelectOffice } from "@repo/ui/components/selects/office-select";
 import { ElectionGroupBullet } from "@repo/ui/components/bullets/election-group-bullet";
 import { createLgaElection } from "#/lib/server/elections";
@@ -78,7 +77,6 @@ export function LgaElectionFormDialog({ open, onClose, onSuccess }: {
   const form = useForm({
     defaultValues: {
       electionGroupId: undefined as number | undefined,
-      electionDate: "",
       officeId: undefined as number | undefined,
     },
     onSubmit: async ({ value }) => {
@@ -109,7 +107,6 @@ export function LgaElectionFormDialog({ open, onClose, onSuccess }: {
   React.useEffect(() => {
     if (open) {
       form.setFieldValue("electionGroupId", undefined);
-      form.setFieldValue("electionDate", "");
       form.setFieldValue("officeId", undefined);
       setLgasMode("custom");
       setSelectedLgas([]);
@@ -130,7 +127,6 @@ export function LgaElectionFormDialog({ open, onClose, onSuccess }: {
   const saveMutation = useMutation({
     mutationFn: async (values: {
       electionGroupId: number | undefined;
-      electionDate: string;
       officeId: number | undefined;
     }) => {
       if (!values.electionGroupId) {
@@ -139,9 +135,6 @@ export function LgaElectionFormDialog({ open, onClose, onSuccess }: {
       if (!values.officeId) {
         throw new Error("Office is required");
       }
-      if (!values.electionDate) {
-        throw new Error("Election date is required");
-      }
       if (selectedLgas.length === 0) {
         throw new Error("At least one LGA must be selected");
       }
@@ -149,7 +142,6 @@ export function LgaElectionFormDialog({ open, onClose, onSuccess }: {
       const res = await createLgaElection({
         data: {
           office_id: values.officeId,
-          election_date: values.electionDate,
           election_group_id: values.electionGroupId,
           lga_ids: selectedLgas.map((l) => l.id),
         },
@@ -235,27 +227,6 @@ export function LgaElectionFormDialog({ open, onClose, onSuccess }: {
                         update={(item) => field.handleChange(item.id)}
                         fetchOffices={getContestedOffices}
                         filterScope="lga"
-                        errorMsg={field.state.meta.errors?.join(", ")}
-                      />
-                    )}
-                  />
-                </div>
-
-                {/* Election Date */}
-                <div className="flex flex-col gap-1.5 w-full">
-                  <Label title="Election date" />
-                  <form.Field
-                    name="electionDate"
-                    validators={{
-                      onChange: ({ value }) =>
-                        !value ? "Election date is required" : undefined,
-                    }}
-                    children={(field) => (
-                      <SelectDate
-                        selectedId={field.state.value}
-                        update={(value) => {
-                          field.handleChange(value);
-                        }}
                         errorMsg={field.state.meta.errors?.join(", ")}
                       />
                     )}

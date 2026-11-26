@@ -1,19 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { getElectionGroups } from "#/lib/server/election_groups";
 import { createNationwideElection } from "#/lib/server/elections";
 import { getContestedOffices } from "#/lib/server/offices";
 import { useContestedOffices } from "#/hooks/useContestedOffices";
 import { ElectionGroupBullet } from "@repo/ui/components/bullets/election-group-bullet";
 import { Button } from "@repo/ui/components/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogPadding,
-  DialogToolbelt,
-} from "@repo/ui/components/dialog";
-import { SelectDate } from "@repo/ui/components/selects/date-select";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogPadding, DialogToolbelt } from "@repo/ui/components/dialog";
 import { SelectOffice } from "@repo/ui/components/selects/office-select";
 import { useForm, useStore } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -30,13 +22,12 @@ export type NationwideElectionFormDialogProps = {
 
 export type NationwideElectionFormValues = {
   electionGroupId: number | undefined;
-  electionDate: string;
   officeId: number | undefined;
 };
 
 /**
  * Modal dialog for creating a nationwide election (e.g. Presidential election)
- * with office selection, election date, and optional election group.
+ * with office selection and election group (election date is inherited from the group).
  * Candidates are managed separately via ManageCandidatesDialog.
  */
 export function NationwideElectionFormDialog({
@@ -54,7 +45,6 @@ export function NationwideElectionFormDialog({
   const form = useForm({
     defaultValues: {
       electionGroupId: undefined as number | undefined,
-      electionDate: "",
       officeId: undefined as number | undefined,
     },
     onSubmit: async ({ value }) => {
@@ -72,7 +62,6 @@ export function NationwideElectionFormDialog({
   useEffect(() => {
     if (open) {
       form.setFieldValue("electionGroupId", undefined);
-      form.setFieldValue("electionDate", "");
       form.setFieldValue("officeId", undefined);
       setError(null);
       setSelectedOfficeName(null);
@@ -92,9 +81,9 @@ export function NationwideElectionFormDialog({
 
   // Submit mutation to create the nationwide election
   const saveMutation = useMutation({
-    mutationFn: async ({ electionGroupId, electionDate, officeId }: NationwideElectionFormValues) => {
-      if (!electionDate) {
-        throw new Error("Election date is required");
+    mutationFn: async ({ electionGroupId, officeId }: NationwideElectionFormValues) => {
+      if (!electionGroupId) {
+        throw new Error("Election group is required");
       }
       if (!officeId) {
         throw new Error("Office is required");
@@ -103,7 +92,6 @@ export function NationwideElectionFormDialog({
       const res = await createNationwideElection({
         data: {
           office_id: officeId,
-          election_date: electionDate,
           election_group_id: electionGroupId,
         },
       });
@@ -160,27 +148,6 @@ export function NationwideElectionFormDialog({
                         }}
                         fetchOffices={getContestedOffices}
                         filterScope="nationwide"
-                        errorMsg={field.state.meta.errors?.join(", ")}
-                      />
-                    )}
-                  />
-                </div>
-
-                {/* Election date only (full-width) */}
-                <div className="w-full flex flex-col gap-1.5">
-                  <Label title="Election date" />
-                  <form.Field
-                    name="electionDate"
-                    validators={{
-                      onChange: ({ value }) =>
-                        !value ? "Election date is required" : undefined,
-                    }}
-                    children={(field) => (
-                      <SelectDate
-                        selectedId={field.state.value}
-                        update={(value) => {
-                          field.handleChange(value);
-                        }}
                         errorMsg={field.state.meta.errors?.join(", ")}
                       />
                     )}

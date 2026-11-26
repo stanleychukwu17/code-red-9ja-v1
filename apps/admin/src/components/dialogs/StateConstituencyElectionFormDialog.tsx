@@ -18,7 +18,6 @@ import { QUERY_KEYS } from "#/lib/config";
 import { getElectionGroups } from "#/lib/server/election_groups";
 import { useNigeriaStates } from "#/hooks/useNigeriaStates";
 import { useStateConstituencies } from "#/hooks/useStateConstituencies";
-import { SelectDate } from "@repo/ui/components/selects/date-select";
 import { SelectOffice } from "@repo/ui/components/selects/office-select";
 
 import { cn } from "@repo/ui/lib/utils";
@@ -89,7 +88,6 @@ export function StateConstituencyElectionFormDialog({
   const form = useForm({
     defaultValues: {
       electionGroupId: undefined as number | undefined,
-      electionDate: "",
       officeId: undefined as number | undefined,
     },
     onSubmit: async ({ value }) => {
@@ -124,7 +122,6 @@ export function StateConstituencyElectionFormDialog({
   React.useEffect(() => {
     if (open) {
       form.setFieldValue("electionGroupId", undefined);
-      form.setFieldValue("electionDate", "");
       form.setFieldValue("officeId", undefined);
       setConstituenciesMode("custom");
       setSelectedConstituencies([]);
@@ -147,7 +144,6 @@ export function StateConstituencyElectionFormDialog({
   const saveMutation = useMutation({
     mutationFn: async (values: {
       electionGroupId: number | undefined;
-      electionDate: string;
       officeId: number | undefined;
     }) => {
       if (!values.electionGroupId) {
@@ -156,9 +152,6 @@ export function StateConstituencyElectionFormDialog({
       if (!values.officeId) {
         throw new Error("Office is required");
       }
-      if (!values.electionDate) {
-        throw new Error("Election date is required");
-      }
       if (selectedConstituencies.length === 0) {
         throw new Error("At least one state constituency must be selected");
       }
@@ -166,7 +159,6 @@ export function StateConstituencyElectionFormDialog({
       const res = await createStateConstituencyElection({
         data: {
           office_id: values.officeId,
-          election_date: values.electionDate,
           election_group_id: values.electionGroupId,
           state_constituency_ids: selectedConstituencies.map((c) => c.id),
         },
@@ -256,28 +248,6 @@ export function StateConstituencyElectionFormDialog({
                         update={(item) => field.handleChange(item.id)}
                         fetchOffices={getContestedOffices}
                         filterScope="state-constituency"
-                        errorMsg={field.state.meta.errors?.join(", ")}
-                      />
-                    )}
-                  />
-                </div>
-
-                {/* Election Date */}
-                <div className="flex flex-col gap-1.5 w-full">
-                  <Label title="Election date" />
-
-                  <form.Field
-                    name="electionDate"
-                    validators={{
-                      onChange: ({ value }) =>
-                        !value ? "Election date is required" : undefined,
-                    }}
-                    children={(field) => (
-                      <SelectDate
-                        selectedId={field.state.value}
-                        update={(value) => {
-                          field.handleChange(value);
-                        }}
                         errorMsg={field.state.meta.errors?.join(", ")}
                       />
                     )}
