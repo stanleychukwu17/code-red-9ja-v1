@@ -43,7 +43,7 @@ export function ApplySuccess() {
           variant="black"
           size="4xl"
           className="w-full rounded-full"
-          onClick={() => navigate({ to: "/practice" })}
+          onClick={() => navigate({ to: "/" })}
         >
           Take Practice Test
         </Button>

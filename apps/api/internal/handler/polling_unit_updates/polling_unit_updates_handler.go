@@ -3,6 +3,7 @@ package polling_unit_updates
 import (
 	"context"
 	"encoding/json"
+	"free9ja/api/internal/config"
 	"free9ja/api/internal/constants"
 	"free9ja/api/internal/db/queries"
 	apimiddleware "free9ja/api/internal/middleware"
@@ -205,9 +206,11 @@ func (h *Handler) CreateUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := utils.ValidateElectionReportingWindow(eg.ElectionDate.Time, time.Now(), utils.PostElectionCollationGraceDays); err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
-		return
+	if config.Load().Env == "production" {
+		if err := utils.ValidateElectionReportingWindow(eg.ElectionDate.Time, time.Now(), utils.PostElectionCollationGraceDays); err != nil {
+			h.utils.RespondError(w, http.StatusBadRequest, err.Error())
+			return
+		}
 	}
 
 	// Validate client created_at timestamp if provided (offline sync)

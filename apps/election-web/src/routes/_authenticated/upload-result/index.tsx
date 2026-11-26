@@ -252,7 +252,7 @@ function UploadResultFlow() {
 
   // Guards
   if (!selectedElectionGroup) return <NoActiveElectionGroup />;
-  if (!electionDay) return <ResultUploadUnavailable onBack={() => navigate({ to: "/" })} />;
+  if (!import.meta.env.DEV && !electionDay) return <ResultUploadUnavailable onBack={() => navigate({ to: "/" })} />;
   if (assignmentsLoading) return <AssignmentsLoadingScreen />;
   if (elections.length === 0) return <NoEligibleElections onBack={() => navigate({ to: "/" })} />;
 

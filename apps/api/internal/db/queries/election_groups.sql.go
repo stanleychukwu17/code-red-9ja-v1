@@ -133,10 +133,7 @@ const listElectionGroups = `-- name: ListElectionGroups :many
 SELECT id, fake_id, name, election_date, active, accepts_candidates, accepts_agents, created_at, updated_at FROM election_groups
 WHERE (
   $1::boolean IS NULL 
-  OR (
-    active = $1::boolean 
-    AND ($1::boolean = FALSE OR election_date >= CURRENT_DATE)
-  )
+  OR active = $1::boolean
 )
 ORDER BY election_date ASC
 `

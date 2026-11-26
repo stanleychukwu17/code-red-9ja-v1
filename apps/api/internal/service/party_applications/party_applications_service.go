@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"free9ja/api/internal/config"
 	"free9ja/api/internal/constants"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
@@ -165,8 +166,8 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 	// Ensure the applicant has a real uploaded avatar (not empty or a temporary placeholder avatar)
 	avatarURL := strings.TrimSpace(userAvatarDetails.Avatar.String)
 	hasUploadedAvatar := hasNewAvatar || (avatarURL != "" && !strings.Contains(avatarURL, "ui-avatars.com"))
-	// Reject submission if no real avatar has been uploaded
-	if !hasUploadedAvatar {
+	// Reject submission if no real avatar has been uploaded (production only)
+	if config.Load().Env == "production" && !hasUploadedAvatar {
 		return 0, ErrAvatarRequired
 	}
 
@@ -854,16 +855,17 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 		return queries.PartyAgentApplication{}, errors.New("application is already processed")
 	}
 
-	// Fetch the election group to check the election date
+	// Fetch the election group to check if it is still active
 	electionGroup, err := txQueries.GetElectionGroupByID(ctx, app.ElectionGroupID)
 	if err != nil {
 		return queries.PartyAgentApplication{}, fmt.Errorf("failed to get election group: %w", err)
 	}
 
-	// Automatically cancel the application if the election has already ended
-	now := time.Now()
-	if utils.ElectionStatusForDate(electionGroup.ElectionDate.Time, now) == "ended" {
-		reason := "Election has already ended"
+	// Automatically cancel the application if the election group is no longer active
+	// now := time.Now() - we can use the date if you prefer that one
+	// if utils.ElectionStatusForDate(electionGroup.ElectionDate.Time, now) == "ended" {
+	if !electionGroup.Active {
+		reason := "Election is no longer active"
 		updatedApp, cancelErr := txQueries.UpdateApplicationStatus(ctx, queries.UpdateApplicationStatusParams{
 			ID:             input.ApplicationID,
 			Status:         "cancelled",
@@ -877,7 +879,7 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 			return queries.PartyAgentApplication{}, fmt.Errorf("failed to commit cancellation: %w", commitErr)
 		}
 
-		return updatedApp, errors.New("cancelled_past_election")
+		return updatedApp, errors.New("cancelled_inactive_election")
 	}
 
 	// Create assignment based on role

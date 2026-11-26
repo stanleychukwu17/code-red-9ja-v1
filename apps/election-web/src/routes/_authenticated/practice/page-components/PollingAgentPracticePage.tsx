@@ -41,7 +41,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { useEffect, useState } from "react";
 import { useLocalStorage } from "usehooks-ts";
-import { ArrivalCard } from "../../_home/components/ArrivalCard";
 import { ArrivalDrawer } from "../../_home/components/ArrivalDrawer";
 import { EarningsTab } from "../../_home/components/EarningsTab";
 import { ElectionStatusCard } from "../../_home/components/ElectionStatusCard";
@@ -49,7 +48,6 @@ import { GiveUpdateFloatingButton } from "../../_home/components/GiveUpdateFloat
 import { HomeHeader, HomeHeader2 } from "../../_home/components/HomeHeader";
 import { ReferralCard } from "../../_home/components/ReferralCard";
 import { RequestPayoutCard } from "../../_home/components/RequestPayoutCard";
-import { HomeBody } from "../../_home/components/Shared";
 import { UploadResultCard } from "../../_home/components/UploadResultCard";
 import { TaskType, pollingAgentTest } from "./tasks-data";
 import { showFeedbackToast } from "./utils";
@@ -1488,28 +1486,7 @@ export function DashboardPage({
         ))}
       </CarouselDotContent>
 
-      <HomeBody>
-        {/* Task Drill: Arrive at Polling Unit */}
-        {hasNotArrived && (
-          <ArrivalCard
-            onArrivedClick={() => {
-              const isCorrect = isThisCorrect("arriveAtPollingUnit");
-              if (!isCorrect) {
-                showFeedbackToast(false, failedAttemptCount + 1);
-                onWrong?.();
-              } else {
-                showFeedbackToast(true, failedAttemptCount);
-                // In practice mode, navigate to the arrival video task with our current context
-                const params = new URLSearchParams(window.location.search);
-                params.set("failedAttemptCount", String(failedAttemptCount));
-                navigate({
-                  to: `/arrival?${params.toString()}`,
-                });
-              }
-            }}
-          />
-        )}
-
+      <div className="flex flex-col gap-6 px-4 mt-5">
         {/* Task Drill: Record Election Start */}
         {hasNotStartedElection && (
           <ElectionStatusCard
@@ -1605,7 +1582,7 @@ export function DashboardPage({
 
         {/* Duty earnings summary */}
         <EarningsTab />
-      </HomeBody>
+      </div>
 
       {/* Arrival confirmation drawer */}
       <ArrivalDrawer

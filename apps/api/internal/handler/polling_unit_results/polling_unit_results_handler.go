@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"time"
 
+	"free9ja/api/internal/config"
 	"free9ja/api/internal/constants"
 	"free9ja/api/internal/db/queries"
 	apimiddleware "free9ja/api/internal/middleware"
@@ -184,9 +185,11 @@ func (h *Handler) SubmitResult(w http.ResponseWriter, r *http.Request) {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election_group_id")
 		return
 	}
-	if err := utils.ValidateElectionReportingWindow(eg.ElectionDate.Time, time.Now(), utils.PostElectionCollationGraceDays); err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
-		return
+	if config.Load().Env == "production" {
+		if err := utils.ValidateElectionReportingWindow(eg.ElectionDate.Time, time.Now(), utils.PostElectionCollationGraceDays); err != nil {
+			h.utils.RespondError(w, http.StatusBadRequest, err.Error())
+			return
+		}
 	}
 
 	if req.AssignmentID != nil && *req.AssignmentID > 0 {

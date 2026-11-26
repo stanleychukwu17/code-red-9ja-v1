@@ -13,10 +13,7 @@ SELECT * FROM election_groups WHERE fake_id = $1;
 SELECT * FROM election_groups
 WHERE (
   sqlc.narg('active')::boolean IS NULL 
-  OR (
-    active = sqlc.narg('active')::boolean 
-    AND (sqlc.narg('active')::boolean = FALSE OR election_date >= CURRENT_DATE)
-  )
+  OR active = sqlc.narg('active')::boolean
 )
 ORDER BY election_date ASC;
 

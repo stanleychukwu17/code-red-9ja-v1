@@ -20,7 +20,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
@@ -669,8 +668,8 @@ func (h *Handler) ApproveApplication(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		// Handle specific business rule errors
 		errStr := err.Error()
-		if strings.Contains(errStr, "cancelled_past_election") {
-			h.utils.RespondSuccess(w, http.StatusOK, "Application cancelled: Please apply for an upcoming election (not in the past)", map[string]interface{}{
+		if strings.Contains(errStr, "cancelled_inactive_election") {
+			h.utils.RespondSuccess(w, http.StatusOK, "Application cancelled: This election is no longer active", map[string]interface{}{
 				"application": updatedApp,
 			})
 			return
@@ -798,10 +797,6 @@ func (h *Handler) BatchApproveApplications(w http.ResponseWriter, r *http.Reques
 	}
 	if !electionGroup.Active {
 		h.utils.RespondError(w, http.StatusForbidden, "Election group is not active")
-		return
-	}
-	if utils.ElectionStatusForDate(electionGroup.ElectionDate.Time, time.Now()) == "ended" {
-		h.utils.RespondError(w, http.StatusBadRequest, "Cannot approve applications for an election that has already ended")
 		return
 	}
 
